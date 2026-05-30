@@ -908,6 +908,7 @@ Kernel::Kernel( const char* file, const char* entryPoint )
 		{
 			// error string has unknown format; just dump it to a window
 			log[2048] = 0; // truncate very long logs
+			if (!log[0]) sprintf( log, "Failed to build entry point %s in %s", entryPoint, file ); 
 			FatalError( log, "Build error" );
 		}
 	#endif
