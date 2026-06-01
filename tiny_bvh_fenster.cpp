@@ -216,7 +216,11 @@ void Tick( float delta_time_s, fenster& f, uint32_t* buf )
 
 	// print frame time / rate in window title
 	char title[50];
+#ifdef _MSC_VER
+	sprintf_s( title, 50, "tiny_bvh %.2f s %.2f Hz", delta_time_s, 1.0f / delta_time_s );
+#else
 	sprintf( title, "tiny_bvh %.2f s %.2f Hz", delta_time_s, 1.0f / delta_time_s );
+#endif
 	fenster_update_title( &f, title );
 }
 
