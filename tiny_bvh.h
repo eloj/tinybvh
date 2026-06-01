@@ -172,10 +172,6 @@ THE SOFTWARE.
 // BVH4 triangle format
 // #define BVH4_GPU_COMPRESSED_TRIS
 
-// BVH8_CPU align to big boundaries - experimental.
-#define BVH8_ALIGN_4K
-// #define BVH8_ALIGN_32K
-
 // ============================================================================
 //
 //        P R E L I M I N A R I E S
@@ -253,48 +249,6 @@ WARNING( "NEON not enabled in compilation." )
 #endif
 #endif // TINYBVH_NO_SIMD
 
-#if 1
-
-// aligned memory allocation
-// note: formally, size needs to be a multiple of 'alignment', see:
-// https://en.cppreference.com/w/c/memory/aligned_alloc.
-// EMSCRIPTEN enforces this.
-// Copy of the same construct in tinyocl, in a different namespace.
-namespace tinybvh {
-inline size_t make_multiple_of( size_t x, size_t alignment ) { return (x + (alignment - 1)) & ~(alignment - 1); }
-#ifdef _MSC_VER // Visual Studio / C11
-#define ALIGNED( x ) __declspec( align( x ) )
-#define _ALIGNED_ALLOC(alignment,size) _aligned_malloc( make_multiple_of( size, alignment ), alignment );
-#define _ALIGNED_FREE(ptr) _aligned_free( ptr );
-#else // EMSCRIPTEN / gcc / clang
-#define ALIGNED( x ) __attribute__( ( aligned( x ) ) )
-#if !defined TINYBVH_NO_SIMD && (defined __x86_64__ || defined _M_X64 || defined __wasm_simd128__ || defined __wasm_relaxed_simd__)
-#include <xmmintrin.h>
-#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
-#define _ALIGNED_FREE(ptr) _mm_free( ptr );
-#else
-#if defined __APPLE__ || defined __aarch64__ || (defined __ANDROID_API__ && (__ANDROID_API__ >= 28))
-#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) );
-#elif defined __GNUC__
-#ifdef __linux__
-#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) );
-#else
-#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
-#endif
-#endif
-#define _ALIGNED_FREE(ptr) free( ptr );
-#endif
-#endif
-inline void* malloc64( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 64, size ); }
-inline void* malloc4k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 4096, size ); }
-inline void* malloc32k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 32768, size ); }
-inline void free64( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
-inline void free4k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
-inline void free32k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
-}; // namespace tiybvh
-
-#else
-
 // aligned memory allocation
 // note: formally, size needs to be a multiple of 'alignment', see:
 // https://en.cppreference.com/w/c/memory/aligned_alloc.
@@ -332,7 +286,7 @@ inline size_t make_multiple_of( size_t x, size_t alignment ) { return (x + (alig
 			#ifdef __linux__
 				#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
 			#else
-				#define _ALIGNED_ALLOC(alignment,size) _aligned_malloc( alignment, make_multiple_of( size, alignment ) )
+				#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
 			#endif
 			#define _ALIGNED_FREE(ptr) free( ptr )
 		#else
@@ -344,14 +298,8 @@ inline size_t make_multiple_of( size_t x, size_t alignment ) { return (x + (alig
 #endif
 
 inline void* malloc64( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 64, size ); }
-inline void* malloc4k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 4096, size ); }
-inline void* malloc32k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 32768, size ); }
 inline void free64( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
-inline void free4k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
-inline void free32k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
 }; // namespace tiybvh
-
-#endif
 
 // Derived TLAS things; for convenience.
 #define INST_IDX_SHFT (32 - INST_IDX_BITS)
@@ -388,8 +336,8 @@ struct ALIGNED( 16 ) bvhvec4
 {
 	// vector naming is designed to not cause any name clashes.
 	bvhvec4() = default;
-	bvhvec4( const float a, const float b, const float c, const float d ) : x( a ), y( b ), z( c ), w( d ) {}
-	bvhvec4( const float a ) : x( a ), y( a ), z( a ), w( a ) {}
+	constexpr bvhvec4( const float a, const float b, const float c, const float d ) : x( a ), y( b ), z( c ), w( d ) {}
+	constexpr bvhvec4( const float a ) : x( a ), y( a ), z( a ), w( a ) {}
 	bvhvec4( const bvhvec3 & a );
 	bvhvec4( const bvhvec3 & a, float b );
 	float& operator [] ( const int32_t i ) { return cell[i]; }
@@ -400,9 +348,9 @@ struct ALIGNED( 16 ) bvhvec4
 struct ALIGNED( 8 ) bvhvec2
 {
 	bvhvec2() = default;
-	bvhvec2( const float a, const float b ) : x( a ), y( b ) {}
-	bvhvec2( const float a ) : x( a ), y( a ) {}
-	bvhvec2( const bvhvec4 a ) : x( a.x ), y( a.y ) {}
+	constexpr bvhvec2( const float a, const float b ) : x( a ), y( b ) {}
+	constexpr bvhvec2( const float a ) : x( a ), y( a ) {}
+	constexpr bvhvec2( const bvhvec4 a ) : x( a.x ), y( a.y ) {}
 	float& operator [] ( const int32_t i ) { return cell[i]; }
 	const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { float x, y; }; float cell[2]; };
@@ -411,9 +359,9 @@ struct ALIGNED( 8 ) bvhvec2
 struct bvhvec3
 {
 	bvhvec3() = default;
-	bvhvec3( const float a, const float b, const float c ) : x( a ), y( b ), z( c ) {}
-	bvhvec3( const float a ) : x( a ), y( a ), z( a ) {}
-	bvhvec3( const bvhvec4 a ) : x( a.x ), y( a.y ), z( a.z ) {}
+	constexpr bvhvec3( const float a, const float b, const float c ) : x( a ), y( b ), z( c ) {}
+	constexpr bvhvec3( const float a ) : x( a ), y( a ), z( a ) {}
+	constexpr bvhvec3( const bvhvec4 a ) : x( a.x ), y( a.y ), z( a.z ) {}
 	float& operator [] ( const int32_t i ) { return cell[i]; }
 	const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { float x, y, z; }; float cell[3]; };
@@ -422,8 +370,8 @@ struct bvhvec3
 struct bvhint3
 {
 	bvhint3() = default;
-	bvhint3( const int32_t a, const int32_t b, const int32_t c ) : x( a ), y( b ), z( c ) {}
-	bvhint3( const int32_t a ) : x( a ), y( a ), z( a ) {}
+	constexpr bvhint3( const int32_t a, const int32_t b, const int32_t c ) : x( a ), y( b ), z( c ) {}
+	constexpr bvhint3( const int32_t a ) : x( a ), y( a ), z( a ) {}
 	bvhint3( const bvhvec3& a ) { x = (int32_t)a.x, y = (int32_t)a.y, z = (int32_t)a.z; }
 	int32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const int32_t& operator [] ( const int32_t i ) const { return cell[i]; }
@@ -433,8 +381,8 @@ struct bvhint3
 struct bvhint2
 {
 	bvhint2() = default;
-	bvhint2( const int32_t a, const int32_t b ) : x( a ), y( b ) {}
-	bvhint2( const int32_t a ) : x( a ), y( a ) {}
+	constexpr bvhint2( const int32_t a, const int32_t b ) : x( a ), y( b ) {}
+	constexpr bvhint2( const int32_t a ) : x( a ), y( a ) {}
 	int32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const int32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { int32_t x, y; }; int32_t cell[2]; };
@@ -443,8 +391,8 @@ struct bvhint2
 struct bvhuint2
 {
 	bvhuint2() = default;
-	bvhuint2( const uint32_t a, const uint32_t b ) : x( a ), y( b ) {}
-	bvhuint2( const uint32_t a ) : x( a ), y( a ) {}
+	constexpr bvhuint2( const uint32_t a, const uint32_t b ) : x( a ), y( b ) {}
+	constexpr bvhuint2( const uint32_t a ) : x( a ), y( a ) {}
 	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y; }; uint32_t cell[2]; };
@@ -453,8 +401,8 @@ struct bvhuint2
 struct bvhuint3
 {
 	bvhuint3() = default;
-	bvhuint3( const uint32_t a, const uint32_t b, const uint32_t c ) : x( a ), y( b ), z( c ) {}
-	bvhuint3( const uint32_t a ) : x( a ), y( a ), z( a ) {}
+	constexpr bvhuint3( const uint32_t a, const uint32_t b, const uint32_t c ) : x( a ), y( b ), z( c ) {}
+	constexpr bvhuint3( const uint32_t a ) : x( a ), y( a ), z( a ) {}
 	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y, z; }; uint32_t cell[3]; };
@@ -463,8 +411,8 @@ struct bvhuint3
 struct bvhuint4
 {
 	bvhuint4() = default;
-	bvhuint4( const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d ) : x( a ), y( b ), z( c ), w( d ) {}
-	bvhuint4( const uint32_t a ) : x( a ), y( a ), z( a ), w( a ) {}
+	constexpr bvhuint4( const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d ) : x( a ), y( b ), z( c ), w( d ) {}
+	constexpr bvhuint4( const uint32_t a ) : x( a ), y( a ), z( a ), w( a ) {}
 	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y, z, w; }; uint32_t cell[4]; };
@@ -473,8 +421,8 @@ struct bvhuint4
 struct bvhmat4 // exists only so we can use tinybvh types conveniently in tinyscene.
 {
 	bvhmat4() = default;
-	float& operator [] ( const int32_t i ) { return cell[i]; }
-	const float& operator [] ( const int32_t i ) const { return cell[i]; }
+	constexpr float& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	bvhmat4& operator += ( const bvhmat4& a ) { for (int i = 0; i < 16; i++) cell[i] += a.cell[i]; return *this; }
 	float cell[16] = { 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1, 0, 0, 0, 0, 1 };
 };
@@ -491,7 +439,7 @@ struct bvhvec4slice
 {
 	bvhvec4slice() = default;
 	bvhvec4slice( const bvhvec4* data, uint32_t count, uint32_t stride = sizeof( bvhvec4 ) );
-	operator bool() const { return !!data; }
+	constexpr operator bool() const { return !!data; }
 	const bvhvec4& operator [] ( size_t i ) const;
 	const int8_t* data = nullptr;
 	uint32_t count, stride;
@@ -5716,11 +5664,6 @@ void BVH4_CPU::ConvertFrom( MBVH<4>& original )
 	{
 		AlignedFree( bvh4Data );
 		void* (*allocator)(size_t, void*) = malloc64;
-	#if defined BVH8_ALIGN_4K
-		allocator = malloc4k;
-	#elif defined BVH8_ALIGN_32K
-		allocator = malloc32k;
-	#endif
 		bvh4Data = (CacheLine*)allocator( blocksNeeded * 64, 0 );
 		allocatedBlocks = blocksNeeded;
 	}
@@ -5929,11 +5872,6 @@ void BVH8_CPU::ConvertFrom( MBVH<8>& original )
 	{
 		AlignedFree( bvh8Data );
 		void* (*allocator)(size_t, void*) = malloc64;
-	#if defined BVH8_ALIGN_4K
-		allocator = malloc4k;
-	#elif defined BVH8_ALIGN_32K
-		allocator = malloc32k;
-	#endif
 		bvh8Data = (CacheLine*)allocator( blocksNeeded * 64, 0 );
 		allocatedBlocks = blocksNeeded;
 	}
