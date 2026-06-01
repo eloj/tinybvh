@@ -421,8 +421,12 @@ int run()
 	f.width = SCRWIDTH;
 	f.height = SCRHEIGHT;
 	f.buf = buf;
-	f.title = new char[128];
+	f.title = new char[32];
+#ifdef _MSC_VER
+	strcpy_s( f.title, 32, "tiny_bvh" );
+#else
 	strcpy( f.title, "tiny_bvh" );
+#endif
 	fenster_open( &f );
 	Timer t;
 	Init();
