@@ -732,7 +732,7 @@ inline float tinybvh_intersect_aabb( Ray& ray, const bvhvec3& aabbMin, const bvh
 	if (tmax >= tmin && tmin < ray.hit.t && tmax >= 0) return tmin; else return BVH_FAR;
 }
 
-constexpr bool tinybvh_aabbs_overlap( const bvhvec3& bmin1, const bvhvec3& bmax1, const bvhvec3& bmin2, const bvhvec3& bmax2 )
+inline bool tinybvh_aabbs_overlap( const bvhvec3& bmin1, const bvhvec3& bmax1, const bvhvec3& bmin2, const bvhvec3& bmax2 )
 {
 	return bmin1.x <= bmax2.x && bmax1.x >= bmin2.x && bmin1.y <= bmax2.y &&
 		bmax1.y >= bmin2.y && bmin1.z <= bmax2.z && bmax1.z >= bmin2.z;
@@ -1644,9 +1644,15 @@ template<typename T, typename Func> static inline void RadixSort( T* input, T* o
 
 // error handling
 #ifdef _WINDOWS_ // windows.h has been included
+#ifdef _MSC_VER // avoid _CRT_SECURE_NO_WARNING requirement for MSC
+#define BVH_FATAL_ERROR_IF(c,s) if (c) { char t[512]; sprintf_s( t, 512, \
+	"Fatal error in tiny_bvh.h, line %i:\n%s\n", __LINE__, s ); \
+	MessageBox( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
+#else
 #define BVH_FATAL_ERROR_IF(c,s) if (c) { char t[512]; sprintf( t, \
 	"Fatal error in tiny_bvh.h, line %i:\n%s\n", __LINE__, s ); \
 	MessageBox( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
+#endif
 #else
 #define BVH_FATAL_ERROR_IF(c,s) if (c) { fprintf( stderr, \
 	"Fatal error in tiny_bvh.h, line %i:\n%s\n", __LINE__, s ); exit( 1 ); }
