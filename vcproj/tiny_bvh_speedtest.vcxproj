@@ -132,12 +132,14 @@
       <OpenMPSupport>true</OpenMPSupport>
       <AdditionalIncludeDirectories>../external/OpenCL/inc/;../external/embree/include;../external/madmann91</AdditionalIncludeDirectories>
       <LanguageStandard>stdcpp17</LanguageStandard>
+      <DebugInformationFormat>OldStyle</DebugInformationFormat>
+      <AdditionalOptions>/fsanitize=address %(AdditionalOptions)</AdditionalOptions>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../external/embree/lib;../external/OpenCL/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);embree4.lib;tbb12.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);embree4.lib;tbb.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
@@ -163,7 +165,7 @@
       <OptimizeReferences>true</OptimizeReferences>
       <GenerateDebugInformation>true</GenerateDebugInformation>
       <AdditionalLibraryDirectories>../external/embree/lib;../external/OpenCL/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);embree4.lib;tbb12.lib</AdditionalDependencies>
+      <AdditionalDependencies>$(CoreLibraryDependencies);%(AdditionalDependencies);embree4.lib;tbb.lib</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
