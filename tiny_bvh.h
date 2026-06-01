@@ -253,6 +253,48 @@ WARNING( "NEON not enabled in compilation." )
 #endif
 #endif // TINYBVH_NO_SIMD
 
+#if 1
+
+// aligned memory allocation
+// note: formally, size needs to be a multiple of 'alignment', see:
+// https://en.cppreference.com/w/c/memory/aligned_alloc.
+// EMSCRIPTEN enforces this.
+// Copy of the same construct in tinyocl, in a different namespace.
+namespace tinybvh {
+inline size_t make_multiple_of( size_t x, size_t alignment ) { return (x + (alignment - 1)) & ~(alignment - 1); }
+#ifdef _MSC_VER // Visual Studio / C11
+#define ALIGNED( x ) __declspec( align( x ) )
+#define _ALIGNED_ALLOC(alignment,size) _aligned_malloc( make_multiple_of( size, alignment ), alignment );
+#define _ALIGNED_FREE(ptr) _aligned_free( ptr );
+#else // EMSCRIPTEN / gcc / clang
+#define ALIGNED( x ) __attribute__( ( aligned( x ) ) )
+#if !defined TINYBVH_NO_SIMD && (defined __x86_64__ || defined _M_X64 || defined __wasm_simd128__ || defined __wasm_relaxed_simd__)
+#include <xmmintrin.h>
+#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
+#define _ALIGNED_FREE(ptr) _mm_free( ptr );
+#else
+#if defined __APPLE__ || defined __aarch64__ || (defined __ANDROID_API__ && (__ANDROID_API__ >= 28))
+#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) );
+#elif defined __GNUC__
+#ifdef __linux__
+#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) );
+#else
+#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
+#endif
+#endif
+#define _ALIGNED_FREE(ptr) free( ptr );
+#endif
+#endif
+inline void* malloc64( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 64, size ); }
+inline void* malloc4k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 4096, size ); }
+inline void* malloc32k( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 32768, size ); }
+inline void free64( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
+inline void free4k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
+inline void free32k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
+}; // namespace tiybvh
+
+#else
+
 // aligned memory allocation
 // note: formally, size needs to be a multiple of 'alignment', see:
 // https://en.cppreference.com/w/c/memory/aligned_alloc.
@@ -290,6 +332,8 @@ inline void free64( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
 inline void free4k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
 inline void free32k( void* ptr, void* = nullptr ) { _ALIGNED_FREE( ptr ); }
 }; // namespace tiybvh
+
+#endif
 
 // Derived TLAS things; for convenience.
 #define INST_IDX_SHFT (32 - INST_IDX_BITS)
@@ -2747,6 +2791,7 @@ void BVH::BuildHQ( const bvhvec4slice& vertices, const uint32_t* indices, uint32
 
 void BVH::PrepareHQBuild( const bvhvec4slice& vertices, const uint32_t* indices, const uint32_t prims )
 {
+	BVH_FATAL_ERROR_IF( vertices.count == 0, "BVH::PrepareHQBuild( .. ), zero primitives." );
 	uint32_t primCount = prims > 0 ? prims : vertices.count / 3;
 	const uint32_t slack = primCount >> 1; // for split prims
 	const uint32_t spaceNeeded = primCount * 3;

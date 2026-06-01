@@ -9,7 +9,7 @@
 #define SCRHEIGHT	320
 
 // GPU ray tracing
-#define ENABLE_OPENCL
+// #define ENABLE_OPENCL
 
 #if 1
 

@@ -93,13 +93,11 @@ void Init()
 	// load raw vertex data for Crytek's Sponza
 	std::string filename{ "./testdata/" };
 	filename += scene;
-	std::fstream s{ filename, s.binary | s.in };
-	s.seekp( 0 );
+	std::ifstream s{ filename, s.binary | s.in };
 	s.read( (char*)&verts, 4 );
 	printf( "Loading triangle data (%i tris).\n", verts );
 	verts *= 3, vertices = (bvhvec4*)malloc64( verts * 16 );
 	s.read( (char*)vertices, verts * 16 );
-	s.close();
 #else
 	// generate a sphere flake scene
 	// sphere_flake( 0, 0, 0, 1.5f ); // regular sphere flake
