@@ -1647,11 +1647,11 @@ template<typename T, typename Func> static inline void RadixSort( T* input, T* o
 #ifdef _MSC_VER // avoid _CRT_SECURE_NO_WARNING requirement for MSC
 #define BVH_FATAL_ERROR_IF(c,s) if (c) { char t[512]; sprintf_s( t, 512, \
 	"Fatal error in tiny_bvh.h, line %i:\n%s\n", __LINE__, s ); \
-	MessageBox( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
+	MessageBoxA( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
 #else
 #define BVH_FATAL_ERROR_IF(c,s) if (c) { char t[512]; sprintf( t, \
 	"Fatal error in tiny_bvh.h, line %i:\n%s\n", __LINE__, s ); \
-	MessageBox( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
+	MessageBoxA( NULL, t, "Fatal error", MB_OK ); exit( 1 ); }
 #endif
 #else
 #define BVH_FATAL_ERROR_IF(c,s) if (c) { fprintf( stderr, \
