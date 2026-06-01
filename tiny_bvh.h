@@ -340,7 +340,7 @@ struct ALIGNED( 16 ) bvhvec4
 	constexpr bvhvec4( const float a ) : x( a ), y( a ), z( a ), w( a ) {}
 	bvhvec4( const bvhvec3 & a );
 	bvhvec4( const bvhvec3 & a, float b );
-	float& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr float& operator [] ( const int32_t i ) { return cell[i]; }
 	const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { float x, y, z, w; }; float cell[4]; };
 };
@@ -351,7 +351,7 @@ struct ALIGNED( 8 ) bvhvec2
 	constexpr bvhvec2( const float a, const float b ) : x( a ), y( b ) {}
 	constexpr bvhvec2( const float a ) : x( a ), y( a ) {}
 	constexpr bvhvec2( const bvhvec4 a ) : x( a.x ), y( a.y ) {}
-	float& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr float& operator [] ( const int32_t i ) { return cell[i]; }
 	const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { float x, y; }; float cell[2]; };
 };
@@ -362,7 +362,7 @@ struct bvhvec3
 	constexpr bvhvec3( const float a, const float b, const float c ) : x( a ), y( b ), z( c ) {}
 	constexpr bvhvec3( const float a ) : x( a ), y( a ), z( a ) {}
 	constexpr bvhvec3( const bvhvec4 a ) : x( a.x ), y( a.y ), z( a.z ) {}
-	float& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr float& operator [] ( const int32_t i ) { return cell[i]; }
 	const float& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { float x, y, z; }; float cell[3]; };
 };
@@ -373,7 +373,7 @@ struct bvhint3
 	constexpr bvhint3( const int32_t a, const int32_t b, const int32_t c ) : x( a ), y( b ), z( c ) {}
 	constexpr bvhint3( const int32_t a ) : x( a ), y( a ), z( a ) {}
 	bvhint3( const bvhvec3& a ) { x = (int32_t)a.x, y = (int32_t)a.y, z = (int32_t)a.z; }
-	int32_t& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr int32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const int32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { int32_t x, y, z; }; int32_t cell[3]; };
 };
@@ -383,7 +383,7 @@ struct bvhint2
 	bvhint2() = default;
 	constexpr bvhint2( const int32_t a, const int32_t b ) : x( a ), y( b ) {}
 	constexpr bvhint2( const int32_t a ) : x( a ), y( a ) {}
-	int32_t& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr int32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const int32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { int32_t x, y; }; int32_t cell[2]; };
 };
@@ -393,7 +393,7 @@ struct bvhuint2
 	bvhuint2() = default;
 	constexpr bvhuint2( const uint32_t a, const uint32_t b ) : x( a ), y( b ) {}
 	constexpr bvhuint2( const uint32_t a ) : x( a ), y( a ) {}
-	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y; }; uint32_t cell[2]; };
 };
@@ -403,7 +403,7 @@ struct bvhuint3
 	bvhuint3() = default;
 	constexpr bvhuint3( const uint32_t a, const uint32_t b, const uint32_t c ) : x( a ), y( b ), z( c ) {}
 	constexpr bvhuint3( const uint32_t a ) : x( a ), y( a ), z( a ) {}
-	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y, z; }; uint32_t cell[3]; };
 };
@@ -413,7 +413,7 @@ struct bvhuint4
 	bvhuint4() = default;
 	constexpr bvhuint4( const uint32_t a, const uint32_t b, const uint32_t c, const uint32_t d ) : x( a ), y( b ), z( c ), w( d ) {}
 	constexpr bvhuint4( const uint32_t a ) : x( a ), y( a ), z( a ), w( a ) {}
-	uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr uint32_t& operator [] ( const int32_t i ) { return cell[i]; }
 	const uint32_t& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { uint32_t x, y, z, w; }; uint32_t cell[4]; };
 };
@@ -545,10 +545,10 @@ inline bvhvec3 tinybvh_transform_vector( const bvhvec3& v, const bvhmat4& T )
 struct bvhdbl3
 {
 	bvhdbl3() = default;
-	bvhdbl3( const double a, const double b, const double c ) : x( a ), y( b ), z( c ) {}
-	bvhdbl3( const double a ) : x( a ), y( a ), z( a ) {}
+	constexpr bvhdbl3( const double a, const double b, const double c ) : x( a ), y( b ), z( c ) {}
+	constexpr bvhdbl3( const double a ) : x( a ), y( a ), z( a ) {}
 	bvhdbl3( const bvhvec3 a ) : x( (double)a.x ), y( (double)a.y ), z( (double)a.z ) {}
-	double& operator [] ( const int32_t i ) { return cell[i]; }
+	constexpr double& operator [] ( const int32_t i ) { return cell[i]; }
 	const double& operator [] ( const int32_t i ) const { return cell[i]; }
 	union { struct { double x, y, z; }; double cell[3]; };
 };
@@ -564,21 +564,21 @@ inline bvhdbl3 tinybvh_max( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl
 
 #ifndef TINYBVH_USE_CUSTOM_VECTOR_TYPES
 
-inline bvhdbl3 operator-( const bvhdbl3& a ) { return bvhdbl3( -a.x, -a.y, -a.z ); }
-inline bvhdbl3 operator+( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x + b.x, a.y + b.y, a.z + b.z ); }
-inline bvhdbl3 operator-( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x - b.x, a.y - b.y, a.z - b.z ); }
-inline void operator+=( bvhdbl3& a, const bvhdbl3& b ) { a.x += b.x; a.y += b.y; a.z += b.z; }
-inline bvhdbl3 operator*( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x * b.x, a.y * b.y, a.z * b.z ); }
-inline bvhdbl3 operator*( const bvhdbl3& a, double b ) { return bvhdbl3( a.x * b, a.y * b, a.z * b ); }
-inline bvhdbl3 operator*( double b, const bvhdbl3& a ) { return bvhdbl3( b * a.x, b * a.y, b * a.z ); }
-inline bvhdbl3 operator/( double b, const bvhdbl3& a ) { return bvhdbl3( b / a.x, b / a.y, b / a.z ); }
-inline bvhdbl3 operator/( bvhdbl3 b, const bvhdbl3& a ) { return bvhdbl3( b.x / a.x, b.y / a.y, b.z / a.z ); }
-inline bvhdbl3 operator*=( bvhdbl3& a, const double b ) { return bvhdbl3( a.x * b, a.y * b, a.z * b ); }
+constexpr bvhdbl3 operator-( const bvhdbl3& a ) { return bvhdbl3( -a.x, -a.y, -a.z ); }
+constexpr bvhdbl3 operator+( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x + b.x, a.y + b.y, a.z + b.z ); }
+constexpr bvhdbl3 operator-( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x - b.x, a.y - b.y, a.z - b.z ); }
+constexpr void operator+=( bvhdbl3& a, const bvhdbl3& b ) { a.x += b.x; a.y += b.y; a.z += b.z; }
+constexpr bvhdbl3 operator*( const bvhdbl3& a, const bvhdbl3& b ) { return bvhdbl3( a.x * b.x, a.y * b.y, a.z * b.z ); }
+constexpr bvhdbl3 operator*( const bvhdbl3& a, double b ) { return bvhdbl3( a.x * b, a.y * b, a.z * b ); }
+constexpr bvhdbl3 operator*( double b, const bvhdbl3& a ) { return bvhdbl3( b * a.x, b * a.y, b * a.z ); }
+constexpr bvhdbl3 operator/( double b, const bvhdbl3& a ) { return bvhdbl3( b / a.x, b / a.y, b / a.z ); }
+constexpr bvhdbl3 operator/( bvhdbl3 b, const bvhdbl3& a ) { return bvhdbl3( b.x / a.x, b.y / a.y, b.z / a.z ); }
+constexpr bvhdbl3 operator*=( bvhdbl3& a, const double b ) { return bvhdbl3( a.x * b, a.y * b, a.z * b ); }
 
 #endif // TINYBVH_USE_CUSTOM_VECTOR_TYPES
 
-inline double tinybvh_length( const bvhdbl3& a ) { return sqrt( a.x * a.x + a.y * a.y + a.z * a.z ); }
-inline bvhdbl3 tinybvh_normalize( const bvhdbl3& a )
+double tinybvh_length( const bvhdbl3& a ) { return sqrt( a.x * a.x + a.y * a.y + a.z * a.z ); }
+bvhdbl3 tinybvh_normalize( const bvhdbl3& a )
 {
 	double l = tinybvh_length( a ), rl = l == 0 ? 0 : (1.0 / l);
 	return a * rl;
@@ -732,7 +732,7 @@ inline float tinybvh_intersect_aabb( Ray& ray, const bvhvec3& aabbMin, const bvh
 	if (tmax >= tmin && tmin < ray.hit.t && tmax >= 0) return tmin; else return BVH_FAR;
 }
 
-inline bool tinybvh_aabbs_overlap( const bvhvec3& bmin1, const bvhvec3& bmax1, const bvhvec3& bmin2, const bvhvec3& bmax2 )
+constexpr bool tinybvh_aabbs_overlap( const bvhvec3& bmin1, const bvhvec3& bmax1, const bvhvec3& bmin2, const bvhvec3& bmax2 )
 {
 	return bmin1.x <= bmax2.x && bmax1.x >= bmin2.x && bmin1.y <= bmax2.y &&
 		bmax1.y >= bmin2.y && bmin1.z <= bmax2.z && bmax1.z >= bmin2.z;
