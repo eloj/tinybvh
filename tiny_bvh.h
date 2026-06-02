@@ -61,7 +61,7 @@ THE SOFTWARE.
 // #define C_INT 1          - the estimated cost of a primitive intersection test. Default is 1.
 // #define C_TRAV 1         - the estimated cost of a traversal step. Default is 1.
 
-// See tiny_bvh_test.cpp for basic usage. In short:
+// See tiny_bvh_minimal.cpp for basic usage. In short:
 // instantiate a BVH: tinybvh::BVH bvh;
 // build it: bvh.Build( (tinybvh::bvhvec4*)triangleData, TRIANGLE_COUNT );
 // ..where triangleData is an array of four-component float vectors:
@@ -70,10 +70,17 @@ THE SOFTWARE.
 // The fourth float in each vertex is a dummy value and exists purely for
 // a more efficient layout of the data in memory.
 
+// A manual for tinybvh can be found here:
+// https://jacco.ompf2.com/2025/01/24/tinybvh-manual-basic-use
+// https://jacco.ompf2.com/2025/01/25/tinybvh-manual-advanced
+
 // More information about the BVH data structure:
 // https://jacco.ompf2.com/2022/04/13/how-to-build-a-bvh-part-1-basics
 
 // Further references: See README.md
+
+// Get the latest version of tinybvh from GitHub:
+// github.com/jbikker/tinybvh
 
 // Author and contributors:
 // Jacco Bikker: BVH code and examples
@@ -84,19 +91,20 @@ THE SOFTWARE.
 // Thierry Cantenot: user-defined alloc & free
 // David Peicho: slices & Rust bindings, API advice
 // Aytek Aman: C++11 threading implementation
+// .. and other contributors: see GitHub page.
 
 #ifndef TINY_BVH_H_
 #define TINY_BVH_H_
 
 // Library version:
 #define TINY_BVH_VERSION_MAJOR	1
-#define TINY_BVH_VERSION_MINOR	6
-#define TINY_BVH_VERSION_SUB	8
+#define TINY_BVH_VERSION_MINOR	7
+#define TINY_BVH_VERSION_SUB	0
 
 // Cached BVH file version - increases only when file layout changes.
-#define TINY_BVH_CACHE_VERSION	168
+#define TINY_BVH_CACHE_VERSION	170
 
-// Run-time checks / debuggin.
+// Run-time checks / debugging.
 // #define PARANOID // checks out-of-bound access of slices
 // #define SLICEDUMP // dumps the slice used for building to a file - debug feature.
 
@@ -257,44 +265,44 @@ WARNING( "NEON not enabled in compilation." )
 namespace tinybvh {
 inline size_t make_multiple_of( size_t x, size_t alignment ) { return (x + (alignment - 1)) & ~(alignment - 1); }
 #ifndef _ALIGNED_ALLOC
-	#ifdef _MSC_VER // Visual Studio / C11
-		#define ALIGNED( x ) __declspec( align( x ) )
-		#define _ALIGNED_ALLOC(alignment,size) _aligned_malloc( make_multiple_of( size, alignment ), alignment )
-		#define _ALIGNED_FREE(ptr) _aligned_free( ptr )
-	#else // EMSCRIPTEN / gcc / clang / Android
-		#define ALIGNED( x ) __attribute__( ( aligned( x ) ) )
-		#if !defined TINYBVH_NO_SIMD && (defined __x86_64__ || defined _M_X64 || defined __wasm_simd128__ || defined __wasm_relaxed_simd__)
-			#include <xmmintrin.h>
-			#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment )
-			#define _ALIGNED_FREE(ptr) _mm_free( ptr )
-		#elif defined(__ANDROID__)
-			#include <malloc.h>
-			#include <android/api-level.h>
-			// Android API 28+ supports aligned_alloc, but older versions (like API 24) 
-			// require memalign for aligned memory.
-			#if defined(__ANDROID_API__) && (__ANDROID_API__ >= 28) // Modern Android (9.0+)
-				#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
-			#else // Legacy Android
-				#define _ALIGNED_ALLOC(alignment,size) memalign( alignment, make_multiple_of( size, alignment ) )
-			#endif
-			#define _ALIGNED_FREE(ptr) free( ptr )
-		#elif defined(__EMSCRIPTEN__) || defined(__APPLE__) || defined(__aarch64__)
-			// Emscripten and Apple strictly follow C11 aligned_alloc
-			#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
-			#define _ALIGNED_FREE(ptr) free( ptr )
-		#elif defined(__GNUC__)
-			#ifdef __linux__
-				#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
-			#else
-				#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
-			#endif
-			#define _ALIGNED_FREE(ptr) free( ptr )
-		#else
-			// Fallback
-			#define _ALIGNED_ALLOC(alignment,size) malloc( size )
-			#define _ALIGNED_FREE(ptr) free( ptr )
-		#endif
-	#endif
+#ifdef _MSC_VER // Visual Studio / C11
+#define ALIGNED( x ) __declspec( align( x ) )
+#define _ALIGNED_ALLOC(alignment,size) _aligned_malloc( make_multiple_of( size, alignment ), alignment )
+#define _ALIGNED_FREE(ptr) _aligned_free( ptr )
+#else // EMSCRIPTEN / gcc / clang / Android
+#define ALIGNED( x ) __attribute__( ( aligned( x ) ) )
+#if !defined TINYBVH_NO_SIMD && (defined __x86_64__ || defined _M_X64 || defined __wasm_simd128__ || defined __wasm_relaxed_simd__)
+#include <xmmintrin.h>
+#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment )
+#define _ALIGNED_FREE(ptr) _mm_free( ptr )
+#elif defined(__ANDROID__)
+#include <malloc.h>
+#include <android/api-level.h>
+// Android API 28+ supports aligned_alloc, but older versions (like API 24) 
+// require memalign for aligned memory.
+#if defined(__ANDROID_API__) && (__ANDROID_API__ >= 28) // Modern Android (9.0+)
+#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
+#else // Legacy Android
+#define _ALIGNED_ALLOC(alignment,size) memalign( alignment, make_multiple_of( size, alignment ) )
+#endif
+#define _ALIGNED_FREE(ptr) free( ptr )
+#elif defined(__EMSCRIPTEN__) || defined(__APPLE__) || defined(__aarch64__)
+// Emscripten and Apple strictly follow C11 aligned_alloc
+#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
+#define _ALIGNED_FREE(ptr) free( ptr )
+#elif defined(__GNUC__)
+#ifdef __linux__
+#define _ALIGNED_ALLOC(alignment,size) aligned_alloc( alignment, make_multiple_of( size, alignment ) )
+#else
+#define _ALIGNED_ALLOC(alignment,size) _mm_malloc( make_multiple_of( size, alignment ), alignment );
+#endif
+#define _ALIGNED_FREE(ptr) free( ptr )
+#else
+// Fallback
+#define _ALIGNED_ALLOC(alignment,size) malloc( size )
+#define _ALIGNED_FREE(ptr) free( ptr )
+#endif
+#endif
 #endif
 
 inline void* malloc64( size_t size, void* = nullptr ) { return size == 0 ? 0 : _ALIGNED_ALLOC( 64, size ); }
@@ -880,7 +888,7 @@ public:
 	BVH( const bvhvec4* vertices, const uint32_t primCount ) { layout = LAYOUT_BVH; Build( vertices, primCount ); }
 	BVH( const bvhvec4slice& vertices ) { layout = LAYOUT_BVH; Build( vertices ); }
 	BVH( BVH&& ) noexcept;
-	BVH& operator=( const BVH& other )=default;
+	BVH& operator=( const BVH& other ) = default;
 	~BVH();
 	void ConvertFrom( const BVH_Verbose& original, bool compact = true );
 	void SplitLeafs( const uint32_t maxPrims );
@@ -897,7 +905,7 @@ public:
 	void BuildQuick( const bvhvec4* vertices, const uint32_t primCount );
 	void BuildQuick( const bvhvec4slice& vertices );
 	void Build( const bvhvec4* vertices, const uint32_t primCount );
-	void BuildAABB( const bvhvec4* aabbs, const uint32_t primCount);
+	void BuildAABB( const bvhvec4* aabbs, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices );
 	void Build( const bvhvec4* vertices, const uint32_t* indices, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices, const uint32_t* indices, const uint32_t primCount );
@@ -1071,7 +1079,7 @@ public:
 	};
 	BVH_Double( BVHContext ctx = {} ) { layout = LAYOUT_BVH_DOUBLE; context = ctx; }
 	BVH_Double( BVH_Double&& );
-	BVH_Double& operator=( const BVH_Double& )=default;
+	BVH_Double& operator=( const BVH_Double& ) = default;
 	~BVH_Double();
 	void Build( const bvhdbl3* vertices, const uint64_t primCount );
 	void Build( BLASInstanceEx* bvhs, const uint64_t instCount, BVH_Double** blasses, const uint64_t blasCount );
@@ -1124,7 +1132,7 @@ public:
 	BVH_GPU( BVHContext ctx = {} ) { layout = LAYOUT_BVH_GPU; context = ctx; }
 	BVH_GPU( const BVH& original ) { /* DEPRICATED */ ConvertFrom( original ); }
 	BVH_GPU( BVH_GPU&& );
-	BVH_GPU& operator=( const BVH_GPU& )=default;
+	BVH_GPU& operator=( const BVH_GPU& ) = default;
 	~BVH_GPU();
 	void Build( const bvhvec4* vertices, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices );
@@ -1160,7 +1168,7 @@ public:
 	BVH_SoA( BVHContext ctx = {} ) { layout = LAYOUT_BVH_SOA; context = ctx; }
 	BVH_SoA( const BVH& original ) { /* DEPRICATED */ layout = LAYOUT_BVH_SOA; ConvertFrom( original ); }
 	BVH_SoA( BVH_SoA&& );
-	BVH_SoA& operator=( const BVH_SoA& )=default;
+	BVH_SoA& operator=( const BVH_SoA& ) = default;
 	~BVH_SoA();
 	void Build( const bvhvec4* vertices, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices );
@@ -1203,7 +1211,7 @@ public:
 	BVH_Verbose( BVHContext ctx = {} ) { layout = LAYOUT_BVH_VERBOSE; context = ctx; }
 	BVH_Verbose( const BVH& original ) { /* DEPRECATED */ layout = LAYOUT_BVH_VERBOSE; ConvertFrom( original ); }
 	BVH_Verbose( BVH_Verbose&& );
-	BVH_Verbose& operator=( const BVH_Verbose& )=default;
+	BVH_Verbose& operator=( const BVH_Verbose& ) = default;
 	~BVH_Verbose();
 	void ConvertFrom( const BVH& original, bool compact = true );
 	float SAHCost( const uint32_t nodeIdx = 0 ) const;
@@ -1247,7 +1255,7 @@ public:
 	MBVH( BVHContext ctx = {} ) { layout = LAYOUT_MBVH; context = ctx; }
 	MBVH( const BVH& original ) { /* DEPRECATED */ layout = LAYOUT_MBVH; ConvertFrom( original ); }
 	MBVH( MBVH&& );
-	MBVH& operator=( const MBVH& )=default;
+	MBVH& operator=( const MBVH& ) = default;
 	~MBVH();
 	void Build( const bvhvec4* vertices, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices );
@@ -1293,7 +1301,7 @@ public:
 	BVH4_GPU( BVHContext ctx = {} ) { layout = LAYOUT_BVH4_GPU; context = ctx; }
 	BVH4_GPU( const MBVH<4>& bvh4 ) { /* DEPRECATED */ layout = LAYOUT_BVH4_GPU; ConvertFrom( bvh4 ); }
 	BVH4_GPU( BVH4_GPU&& );
-	BVH4_GPU& operator=( const BVH4_GPU& )=default;
+	BVH4_GPU& operator=( const BVH4_GPU& ) = default;
 	~BVH4_GPU();
 	void Build( const bvhvec4* vertices, const uint32_t primCount );
 	void Build( const bvhvec4slice& vertices );
@@ -1332,7 +1340,7 @@ public:
 	struct CacheLine { SIMDVEC4 a, b, c, d; };
 	BVH4_CPU( BVHContext ctx = {} ) { layout = LAYOUT_BVH4_CPU; context = ctx; c_int = 2; l_quads = true; }
 	BVH4_CPU( BVH4_CPU&& );
-	BVH4_CPU& operator=( const BVH4_CPU& )=default;
+	BVH4_CPU& operator=( const BVH4_CPU& ) = default;
 	~BVH4_CPU();
 	void Save( const char* fileName );
 	bool Load( const char* fileName, const uint32_t expectedTris );
@@ -1367,7 +1375,7 @@ public:
 	BVH8_CWBVH( BVHContext ctx = {} ) { layout = LAYOUT_CWBVH; context = ctx; }
 	BVH8_CWBVH( MBVH<8>& bvh8 ) { /* DEPRECATED */ layout = LAYOUT_CWBVH; ConvertFrom( bvh8 ); }
 	BVH8_CWBVH( BVH8_CWBVH&& );
-	BVH8_CWBVH& operator=( const BVH8_CWBVH& )=default;
+	BVH8_CWBVH& operator=( const BVH8_CWBVH& ) = default;
 	~BVH8_CWBVH();
 	void Save( const char* fileName );
 	bool Load( const char* fileName, const uint32_t expectedTris );
@@ -1442,7 +1450,7 @@ public:
 	struct CacheLine { SIMDVEC8 a, b; };
 	BVH8_CPU( BVHContext ctx = {} ) { layout = LAYOUT_BVH8_AVX2; context = ctx; c_int = 2; l_quads = true; }
 	BVH8_CPU( BVH8_CPU&& );
-	BVH8_CPU& operator=( const BVH8_CPU& )=default;
+	BVH8_CPU& operator=( const BVH8_CPU& ) = default;
 	~BVH8_CPU();
 	void Save( const char* fileName );
 	bool Load( const char* fileName, const uint32_t expectedTris );
@@ -2302,35 +2310,35 @@ void BVH::Build( const bvhvec4slice& vertices, const uint32_t* indices, uint32_t
 	if (useFullSweep) BuildFullSweep(); else Build();
 }
 
-void BVH::BuildAABB(const bvhvec4* aabbs, const uint32_t primCount)
+void BVH::BuildAABB( const bvhvec4* aabbs, const uint32_t primCount )
 {
-	BVH_FATAL_ERROR_IF(primCount == 0, " BVH::BuildAABB(const bvhvec4* aabbs, const uint32_t primCount), primCount == 0.");
+	BVH_FATAL_ERROR_IF( primCount == 0, " BVH::BuildAABB(const bvhvec4* aabbs, const uint32_t primCount), primCount == 0." );
 	triCount = idxCount = primCount;
 	const uint32_t spaceNeeded = primCount * 2; // upper limit
 	if (allocatedNodes < spaceNeeded)
 	{
-		AlignedFree(bvhNode);
-		AlignedFree(primIdx);
-		AlignedFree(fragment);
-		bvhNode = (BVHNode*)AlignedAlloc(spaceNeeded * sizeof(BVHNode));
+		AlignedFree( bvhNode );
+		AlignedFree( primIdx );
+		AlignedFree( fragment );
+		bvhNode = (BVHNode*)AlignedAlloc( spaceNeeded * sizeof( BVHNode ) );
 		allocatedNodes = spaceNeeded;
-		memset(&bvhNode[1], 0, 32);	// node 1 remains unused, for cache line alignment.
-		primIdx = (uint32_t*)AlignedAlloc(primCount * sizeof(uint32_t));
-		fragment = (Fragment*)AlignedAlloc(primCount * sizeof(Fragment));
+		memset( &bvhNode[1], 0, 32 );	// node 1 remains unused, for cache line alignment.
+		primIdx = (uint32_t*)AlignedAlloc( primCount * sizeof( uint32_t ) );
+		fragment = (Fragment*)AlignedAlloc( primCount * sizeof( Fragment ) );
 	}
 	// copy relevant data from instance array
 	BVHNode& root = bvhNode[0];
-	root.leftFirst = 0, root.triCount = primCount, root.aabbMin = bvhvec3(BVH_FAR), root.aabbMax = bvhvec3(-BVH_FAR);
+	root.leftFirst = 0, root.triCount = primCount, root.aabbMin = bvhvec3( BVH_FAR ), root.aabbMax = bvhvec3( -BVH_FAR );
 	// * 2 since, primCount is the amount of aabbs and each aabb is made of 2 bvhvec4
 	int realIndex = 0;
 	for (uint32_t i = 0; i < primCount; i++)
 	{
 		//customGetAABB(i, fragment[i].bmin, fragment[i].bmax);
-		fragment[i].bmin = bvhvec3(aabbs[realIndex]);
-		fragment[i].bmax = bvhvec3(aabbs[realIndex + 1]);
+		fragment[i].bmin = bvhvec3( aabbs[realIndex] );
+		fragment[i].bmax = bvhvec3( aabbs[realIndex + 1] );
 		fragment[i].primIdx = i, fragment[i].clipped = 0, primIdx[i] = i;
-		root.aabbMin = tinybvh_min(root.aabbMin, fragment[i].bmin);
-		root.aabbMax = tinybvh_max(root.aabbMax, fragment[i].bmax);
+		root.aabbMin = tinybvh_min( root.aabbMin, fragment[i].bmin );
+		root.aabbMax = tinybvh_max( root.aabbMax, fragment[i].bmax );
 
 		realIndex += 2;
 	}
@@ -2710,7 +2718,7 @@ void BVH::BuildFullSweep( uint32_t nodeIdx, uint32_t depth )
 			// partition
 			for (uint32_t i = 0; i < splitPos; i++) flag[sortedIdx[splitAxis][node.leftFirst + i]] = 0; // "left"
 			for (uint32_t i = splitPos; i < node.triCount; i++) flag[sortedIdx[splitAxis][node.leftFirst + i]] = 1; // "right"
-			
+
 			// stable partition needs temp buffer, let's reuse memory
 			uint32_t* tmp = (uint32_t*)SARs;
 			for (uint32_t a = 0; a < 3; a++) if (a != splitAxis)
@@ -2734,7 +2742,7 @@ void BVH::BuildFullSweep( uint32_t nodeIdx, uint32_t depth )
 			bvhNode[n + 1].leftFirst = node.leftFirst + leftCount;
 			bvhNode[n + 1].triCount = rightCount;
 			node.leftFirst = n, node.triCount = 0;
-			
+
 			if (tinybvh_min( leftCount, rightCount ) >= (1 << 13) && threadedBuild)
 			{
 				std::thread t( &BuildFullSweep_, n, depth + 1, this );
@@ -4707,7 +4715,7 @@ void BVH_Verbose::MergeLeafs()
 // BVH_GPU implementation
 // ----------------------------------------------------------------------------
 
-BVH_GPU::BVH_GPU(BVH_GPU&& other)
+BVH_GPU::BVH_GPU( BVH_GPU&& other )
 {
 	*this = other;
 	other.bvhNode = 0;
@@ -4887,7 +4895,7 @@ int32_t BVH_GPU::Intersect( Ray& ray ) const
 // BVH_SoA implementation
 // ----------------------------------------------------------------------------
 
-BVH_SoA::BVH_SoA(BVH_SoA&& other)
+BVH_SoA::BVH_SoA( BVH_SoA&& other )
 {
 	*this = other;
 	other.bvhNode = 0;
@@ -5236,7 +5244,7 @@ template<int M> void MBVH<M>::ConvertFrom( const BVH& original, bool compact )
 // BVH4_GPU implementation
 // ----------------------------------------------------------------------------
 
-BVH4_GPU::BVH4_GPU(BVH4_GPU&& other)
+BVH4_GPU::BVH4_GPU( BVH4_GPU&& other )
 {
 	*this = other;
 	other.bvh4Data = 0;
@@ -5537,7 +5545,7 @@ int32_t BVH4_GPU::Intersect( Ray& ray ) const
 // BVH4_CPU implementation
 // ----------------------------------------------------------------------------
 
-BVH4_CPU::BVH4_CPU(BVH4_CPU&& other)
+BVH4_CPU::BVH4_CPU( BVH4_CPU&& other )
 {
 	*this = other;
 	other.bvh4Data = 0;
@@ -6696,10 +6704,13 @@ void BVH::BuildAVXBinTask( const uint32_t first, const uint32_t last, __m256* bi
 	memset( count, 0, 3 * AVXBINS * 4 );
 	memcpy( binbox, orig, 3 * AVXBINS * 32 );
 	__m256 r0, r1, r2, f = _mm256_xor_ps( _mm256_and_ps( frag8[fi], mask6 ), signFlip8 );
-	const __m128 fmin = _mm_and_ps( frag4[fi].bmin4, mask3 ), fmax = _mm_and_ps( frag4[fi].bmax4, mask3 );
-	const __m128i bi4 = _mm_cvtps_epi32( _mm_sub_ps( _mm_mul_ps( _mm_sub_ps( _mm_add_ps( fmax, fmin ), nmin4 ), rpd4 ), half4 ) );
+	const __m128i zero4i = _mm_setzero_si128();
 	union { __m128i bc4; uint32_t bc[4]; };
-	bc4 = _mm_max_epi32( _mm_min_epi32( bi4, maxbin4 ), _mm_setzero_si128() ); // clamp needed after all
+	bc4 = _mm_max_epi32( _mm_cvtps_epi32( _mm_sub_ps( _mm_mul_ps( _mm_sub_ps( _mm_add_ps( frag4[fi].bmax4, frag4[fi].bmin4 ), nmin4 ), rpd4 ), half4 ) ), zero4i );
+#ifdef _DEBUG
+	// this should never trigger. leaving it in for _DEBUG for now.
+	for( int i = 0; i < 4; i++ ) if (bc4.m128i_i32[i] >= 8) printf( "CLAMPED TO 7\n" );
+#endif
 	uint32_t i0 = bc[0], i1 = bc[1], i2 = bc[2], * ti = primIdx + first + 1;
 	for (uint32_t i = first; i < last - 1; i++)
 	{
@@ -6708,10 +6719,13 @@ void BVH::BuildAVXBinTask( const uint32_t first, const uint32_t last, __m256* bi
 		if (fid > triCount) fid = triCount - 1; // never happens but g++ *and* vs2017 need this to not crash...
 	#endif
 		const __m256 b0 = binbox[i0], b1 = binbox[AVXBINS + i1], b2 = binbox[2 * AVXBINS + i2];
-		const __m128 frmin = _mm_and_ps( frag4[fid].bmin4, mask3 ), frmax = _mm_and_ps( frag4[fid].bmax4, mask3 );
+		const __m128 frmin = frag4[fid].bmin4, frmax = frag4[fid].bmax4;
 		r0 = _mm256_max_ps( b0, f ), r1 = _mm256_max_ps( b1, f ), r2 = _mm256_max_ps( b2, f );
-		const __m128i b4 = _mm_cvtps_epi32( _mm_sub_ps( _mm_mul_ps( _mm_sub_ps( _mm_add_ps( frmax, frmin ), nmin4 ), rpd4 ), half4 ) );
-		bc4 = _mm_max_epi32( _mm_min_epi32( b4, maxbin4 ), _mm_setzero_si128() ); // clamp needed after all
+		bc4 = _mm_max_epi32( _mm_cvtps_epi32( _mm_sub_ps( _mm_mul_ps( _mm_sub_ps( _mm_add_ps( frmax, frmin ), nmin4 ), rpd4 ), half4 ) ), zero4i );
+	#ifdef _DEBUG
+		// this should never trigger. leaving it in for _DEBUG for now.
+		for( int i = 0; i < 4; i++ ) if (bc4.m128i_i32[i] >= 8) printf( "CLAMPED TO 7\n" );
+	#endif
 		f = _mm256_xor_ps( _mm256_and_ps( frag8[fid], mask6 ), signFlip8 );
 		count[i0]++, count[AVXBINS + i1]++, count[AVXBINS * 2 + i2]++;
 		binbox[i0] = r0, i0 = bc[0];
@@ -6745,10 +6759,10 @@ void BVH::BuildAVXSubtree( uint32_t nodeIdx, uint32_t depth )
 	#else
 		if (triCount < MT_BUILD_THRESHOLD) threadedBuild = false; else
 		{
-		if (!globalSubtreeJobs) globalSubtreeJobs = new JobSystem();
-		if (!globalBinningJobs) globalBinningJobs = new JobSystem();
-		subtreeJobs = globalSubtreeJobs;
-		binningJobs = globalBinningJobs;
+			if (!globalSubtreeJobs) globalSubtreeJobs = new JobSystem();
+			if (!globalBinningJobs) globalBinningJobs = new JobSystem();
+			subtreeJobs = globalSubtreeJobs;
+			binningJobs = globalBinningJobs;
 			atomicNewNodePtr = new std::atomic<uint32_t>( newNodePtr );
 		}
 	#endif
@@ -6765,11 +6779,11 @@ void BVH::BuildAVXSubtree( uint32_t nodeIdx, uint32_t depth )
 			__m128* node4 = (__m128*) & bvhNode[nodeIdx];
 			// find optimal object split
 			const __m128 d4 = _mm_blendv_ps( min1, _mm_sub_ps( node4[1], node4[0] ), mask3 );
-			const __m128 nmin4 = _mm_mul_ps( _mm_and_ps( node4[0], mask3 ), two4 );
+			const __m128 nmin4 = _mm_add_ps( node4[0], node4[0] );
 			const __m128 rpd4 = _mm_and_ps( _mm_div_ps( binmul3, d4 ), _mm_cmpneq_ps( d4, _mm_setzero_ps() ) );
 			// implementation of Section 4.1 of "Parallel Spatial Splits in Bounding Volume Hierarchies":
 			// main loop operates on two fragments to minimize dependencies and maximize ILP.
-			if (depth < 5 && threadedBuild && node.triCount > 10000)
+			if (threadedBuild && node.triCount > MT_BUILD_THRESHOLD)
 			{
 				// run binning in parallel slices
 				const uint32_t sliceSize = node.triCount / slices;
@@ -6792,7 +6806,8 @@ void BVH::BuildAVXSubtree( uint32_t nodeIdx, uint32_t depth )
 			else
 				BuildAVXBinTask( node.leftFirst, node.leftFirst + node.triCount, binbox, binboxOrig, count, nmin4, rpd4 );
 			// calculate per-split totals
-			float splitCost = BVH_FAR, rSAV = 1.0f / node.SurfaceArea();
+			float splitCost = BVH_FAR;
+			const float rSAV = 1.0f / node.SurfaceArea();
 			uint32_t bestAxis = 0, bestPos = 0;
 			const __m256* bb = binbox;
 			for (int32_t a = 0; a < 3; a++, bb += AVXBINS) if ((node.aabbMax[a] - node.aabbMin[a]) > minDim[a])
@@ -6821,7 +6836,7 @@ void BVH::BuildAVXSubtree( uint32_t nodeIdx, uint32_t depth )
 				float ANLR6 = BVH_FAR; PROCESS_PLANE( a, 6, ANLR6, lN6, rN0, lb6, rb0 ); // least likely split
 			}
 			splitCost = c_trav + c_int * rSAV * splitCost;
-			float noSplitCost = (float)node.triCount * c_int;
+			const float noSplitCost = (float)node.triCount * c_int;
 			if (splitCost >= noSplitCost) break; // not splitting is better.
 			// in-place partition
 			const float rpd = (*(bvhvec3*)&rpd4)[bestAxis], nmin = (*(bvhvec3*)&nmin4)[bestAxis];
@@ -6841,18 +6856,17 @@ void BVH::BuildAVXSubtree( uint32_t nodeIdx, uint32_t depth )
 			node.leftFirst = n, node.triCount = 0;
 			*(__m256*)& bvhNode[n + 1] = _mm256_xor_ps( bestRBox, signFlip8 );
 			bvhNode[n + 1].leftFirst = i, bvhNode[n + 1].triCount = rightCount;
-			if (leftCount + rightCount > 2000 && depth < 5 && threadedBuild)
+			const bool spawnThreads = leftCount + rightCount > 5000 && depth < 12 && threadedBuild;
+			if (!spawnThreads) task[taskCount++] = n + 1, nodeIdx = n; else
 			{
-				// be gentle, these are my first lambdas ever.
 				BVH* thisBVH = this; // avoid warnings / complexities of capturing this
-				subtreeJobs->Execute( [=]() { thisBVH->BuildAVXSubtree( n, depth + 1 ); } );
 				subtreeJobs->Execute( [=]() { thisBVH->BuildAVXSubtree( n + 1, depth + 1 ); } );
-				break;
+				nodeIdx = n;
 			}
-			task[taskCount++] = n + 1, nodeIdx = n;
 		}
 		// fetch subdivision task from stack
-		if (taskCount == 0) break; else nodeIdx = task[--taskCount];
+		if (taskCount == 0) break; 
+		nodeIdx = task[--taskCount];
 	}
 	// all done.
 	if (depth == 0)
@@ -8106,7 +8120,7 @@ bool BVH_SoA::IsOccluded( const Ray& ray ) const
 
 #ifdef DOUBLE_PRECISION_SUPPORT
 
-BVH_Double::BVH_Double(BVH_Double&& other)
+BVH_Double::BVH_Double( BVH_Double&& other )
 {
 	*this = other;
 	other.fragment = 0;
