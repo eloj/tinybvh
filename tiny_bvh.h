@@ -6703,7 +6703,7 @@ void BVH::BuildAVXBinTask( const uint32_t first, const uint32_t last, __m256* bi
 	uint32_t fi = primIdx[first];
 	memset( count, 0, 3 * AVXBINS * 4 );
 	memcpy( binbox, orig, 3 * AVXBINS * 32 );
-	__m256 r0, r1, r2, f = _mm256_xor_ps( _mm256_and_ps( frag8[fi], mask6 ), signFlip8 );
+	__m256 r0, r1, r2, f = _mm256_xor_ps( frag8[fi], signFlip8 );
 	const __m128i zero4i = _mm_setzero_si128();
 	union { __m128i bc4; uint32_t bc[4]; };
 	bc4 = _mm_max_epi32( _mm_cvtps_epi32( _mm_sub_ps( _mm_mul_ps( _mm_sub_ps( _mm_add_ps( frag4[fi].bmax4, frag4[fi].bmin4 ), nmin4 ), rpd4 ), half4 ) ), zero4i );
@@ -6726,7 +6726,7 @@ void BVH::BuildAVXBinTask( const uint32_t first, const uint32_t last, __m256* bi
 		// this should never trigger. leaving it in for _DEBUG for now.
 		for( int i = 0; i < 4; i++ ) if (bc4.m128i_i32[i] >= 8) printf( "CLAMPED TO 7\n" );
 	#endif
-		f = _mm256_xor_ps( _mm256_and_ps( frag8[fid], mask6 ), signFlip8 );
+		f = _mm256_xor_ps( frag8[fid], signFlip8 );
 		count[i0]++, count[AVXBINS + i1]++, count[AVXBINS * 2 + i2]++;
 		binbox[i0] = r0, i0 = bc[0];
 		binbox[AVXBINS + i1] = r1, i1 = bc[1];
