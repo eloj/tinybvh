@@ -457,7 +457,13 @@ struct bvhvec4slice
 // Note: Since this header file is expected to be included in a source file
 // of a separate project, the static keyword doesn't provide sufficient
 // isolation; hence the tinybvh_ prefix.
-inline float tinybvh_safercp( const float x ) { float r = 1 / x; if (isnan( r )) r = x < 0 ? (-BVH_FAR) : BVH_FAR; return r; }
+inline bool tinybvh_isnan(float f) 
+{
+    uint32_t i;
+    std::memcpy( &i, &f, sizeof( i ) );
+    return (i & 0x7F800000) == 0x7F800000 && (i & 0x007FFFFF) != 0;
+}
+inline float tinybvh_safercp( const float x ) { float r = 1 / x; if (tinybvh_isnan( r )) r = x < 0 ? (-BVH_FAR) : BVH_FAR; return r; }
 inline bvhvec3 tinybvh_safercp( const bvhvec3 a ) { return bvhvec3( tinybvh_safercp( a.x ), tinybvh_safercp( a.y ), tinybvh_safercp( a.z ) ); }
 inline bvhvec3 tinybvh_rcp( const bvhvec3 a ) { return tinybvh_safercp( a ); /* bvhvec3( 1.0f / a.x, 1.0f / a.y, 1.0f / a.z ); */ }
 inline float tinybvh_min( const float a, const float b ) { return a < b ? a : b; }
@@ -1709,7 +1715,7 @@ bool BVH_SoA::IsOccluded( const Ray& ) const { BVH_FATAL_ERROR( "BVH_SoA::IsOccl
 
 // ray validation: throw an error if the input ray contains nans.
 #define VALIDATE_RAY(r) { float test = r.D.x + r.D.y + r.D.z + ray.hit.t + r.O.x \
-	+ r.O.y + r.O.z; BVH_FATAL_ERROR_IF( std::isnan( test ), "Input ray contains NaNs." ); }
+	+ r.O.y + r.O.z; BVH_FATAL_ERROR_IF( tinybvh_isnan( test ), "Input ray contains NaNs." ); }
 
 #ifndef TINYBVH_USE_CUSTOM_VECTOR_TYPES
 
